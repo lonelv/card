@@ -16,14 +16,6 @@ import (
 	"github.com/skiplee85/card/tesseract"
 )
 
-type WXConfig struct {
-	WXAppID        string `ini:"WX_APP_ID"`
-	WXAppSecret    string `ini:"WX_APP_SECRET"`
-	WXToken        string `ini:"WX_TOKEN"`
-	WXOriID        string `ini:"WX_ORI_ID"`
-	WXEncodeAESKey string `ini:"WX_ENCODE_AES_KEY"`
-}
-
 var (
 	msgHandler        core.Handler
 	msgServer         *core.Server
@@ -32,7 +24,7 @@ var (
 )
 
 // InitWX 初始化微信
-func InitWX(config *WXConfig) {
+func InitWX(wxAppID, wxAppSecret, wxToken, wxOriID, wxEncodeAESKey string) {
 	mux := core.NewServeMux()
 	mux.DefaultMsgHandleFunc(defaultMsgHandler)
 	mux.DefaultEventHandleFunc(defaultEventHandler)
@@ -41,9 +33,9 @@ func InitWX(config *WXConfig) {
 	mux.EventHandleFunc(menu.EventTypeClick, menuClickEventHandler)
 
 	msgHandler = mux
-	msgServer = core.NewServer(config.WXOriID, config.WXAppID, config.WXToken, config.WXEncodeAESKey, msgHandler, nil)
+	msgServer = core.NewServer(wxOriID, wxAppID, wxToken, wxEncodeAESKey, msgHandler, nil)
 
-	accessTokenServer = core.NewDefaultAccessTokenServer(config.WXAppID, config.WXAppSecret, nil)
+	accessTokenServer = core.NewDefaultAccessTokenServer(wxAppID, wxAppSecret, nil)
 	wechatClient = core.NewClient(accessTokenServer, nil)
 
 	http.HandleFunc("/wx_callback", wxCallbackHandler)

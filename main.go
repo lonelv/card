@@ -14,14 +14,18 @@ import (
 )
 
 type Config struct {
-	Level      string `ini:"LEVEL"`
-	DBUser     string `ini:"DB_USER"`
-	DBPassword string `ini:"DB_PASSWORD"`
-	DBHost     string `ini:"DB_HOST"`
-	DBPort     int    `ini:"DB_PORT"`
-	DBDataBase string `ini:"DB_DATABASE"`
-	HTTPPort   int    `ini:"HTTP_PORT"`
-	*wx.WXConfig
+	Level          string `ini:"LEVEL"`
+	DBUser         string `ini:"DB_USER"`
+	DBPassword     string `ini:"DB_PASSWORD"`
+	DBHost         string `ini:"DB_HOST"`
+	DBPort         int    `ini:"DB_PORT"`
+	DBDataBase     string `ini:"DB_DATABASE"`
+	HTTPPort       int    `ini:"HTTP_PORT"`
+	WXAppID        string `ini:"WX_APP_ID"`
+	WXAppSecret    string `ini:"WX_APP_SECRET"`
+	WXToken        string `ini:"WX_TOKEN"`
+	WXOriID        string `ini:"WX_ORI_ID"`
+	WXEncodeAESKey string `ini:"WX_ENCODE_AES_KEY"`
 }
 
 func main() {
@@ -38,7 +42,7 @@ func main() {
 
 	log.InitLog(config.Level)
 	dao.InitMongo(fmt.Sprintf("mongodb://%s:%s@%s:%d", config.DBUser, config.DBPassword, config.DBHost, config.DBPort), config.DBDataBase, 10)
-	wx.InitWX(config.WXConfig)
+	wx.InitWX(config.WXAppID, config.WXAppSecret, config.WXToken, config.WXOriID, config.WXEncodeAESKey)
 
 	http.HandleFunc("/upload", upload)
 	http.ListenAndServe(fmt.Sprintf(":%d", config.HTTPPort), nil)
