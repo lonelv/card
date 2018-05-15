@@ -1,7 +1,7 @@
 package wx
 
 import (
-	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -75,11 +75,10 @@ func imgMsgHandler(ctx *core.Context) {
 			data.Keyword2.Value = "请重新拍摄"
 		} else {
 			data.First.Value = "解析成功"
-			bs, _ := json.Marshal(c)
-			data.Keyword2.Value = string(bs)
+			data.Keyword2.Value = fmt.Sprintf("卡号:%s\n卡密:%s", c.No, c.Secret)
 		}
 		resp := &template.TemplateMessage2{
-			ToUser:     msg.ToUserName,
+			ToUser:     msg.FromUserName,
 			TemplateId: "9YhtUXt4qIs7h_qtcungbN0dGxwdgn5B4w8Nk-RDW9U",
 			Data:       data,
 		}
