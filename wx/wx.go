@@ -9,7 +9,7 @@ import (
 	"gopkg.in/chanxuehong/wechat.v2/mp/menu"
 	"gopkg.in/chanxuehong/wechat.v2/mp/message/callback/request"
 	"gopkg.in/chanxuehong/wechat.v2/mp/message/callback/response"
-	"gopkg.in/chanxuehong/wechat.v2/mp/message/custom"
+	"gopkg.in/chanxuehong/wechat.v2/mp/message/template"
 
 	"github.com/skiplee85/card/dao"
 	"github.com/skiplee85/card/log"
@@ -22,6 +22,18 @@ var (
 	accessTokenServer core.AccessTokenServer
 	wechatClient      *core.Client
 )
+
+type standard struct {
+	Value string `json:"value"`
+	Color string `json:"color"`
+}
+
+type tpl struct {
+	First    standard `json:"first"`
+	Keyword1 standard `json:"keyword1"`
+	Keyword2 standard `json:"keyword2"`
+	Remark   standard `json:"remark"`
+}
 
 // InitWX 初始化微信
 func InitWX(wxAppID, wxAppSecret, wxToken, wxOriID, wxEncodeAESKey string) {
@@ -55,16 +67,23 @@ func imgMsgHandler(ctx *core.Context) {
 	ctx.NoneResponse()
 	go func() {
 		msg := request.GetImage(ctx.MixedMsg)
-		ret := ""
+		data := &tpl{}
+		data.Keyword1.Value = "系统"
 		c := getPic(msg.PicURL)
 		if c == nil {
-			ret = "解析失败，请重拍~"
+			data.First.Value = "解析失败"
+			data.Keyword2.Value = "请重新拍摄"
 		} else {
+			data.First.Value = "解析成功"
 			bs, _ := json.Marshal(c)
-			ret = string(bs)
+			data.Keyword2.Value = string(bs)
 		}
-		resp := custom.NewText(msg.ToUserName, ret, "")
-		custom.Send(wechatClient, resp)
+		resp := &template.TemplateMessage2{
+			ToUser:     msg.ToUserName,
+			TemplateId: "9YhtUXt4qIs7h_qtcungbN0dGxwdgn5B4w8Nk-RDW9U",
+			Data:       data,
+		}
+		template.Send(wechatClient, resp)
 	}()
 }
 
