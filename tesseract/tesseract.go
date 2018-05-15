@@ -3,7 +3,9 @@ package tesseract
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -63,11 +65,28 @@ func ParseCard(path string) *dao.Card {
 			if err == mgo.ErrNotFound {
 				sc.Insert(c)
 			} else {
-				log.Error("Mongo Error", err)
+				log.Error("Mongo Error %+v, %+v", err, c)
 			}
 		}
 	})
-	log.Release("Parse Succ! No:%s\nSecret:%s\n", c.No, c.Secret)
+	os.Rename(path, fmt.Sprintf("./data/pic/%s.jpg", c.No))
+	log.Release("Parse Succ!\nNo:%s\nSecret:%s\n", c.No, c.Secret)
 
 	return c
+}
+
+// ParseCardByBytes 解析
+func ParseCardByBytes(bs []byte) *dao.Card {
+	tmpFile := fmt.Sprintf("./data/tmp/%d.jpg", time.Now().UnixNano())
+	f, err := os.OpenFile(tmpFile, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		log.Error("%+v", err)
+		return nil
+	}
+
+	f.Write(bs)
+	f.Close()
+
+	path, _ := filepath.Abs(tmpFile)
+	return ParseCard(path)
 }

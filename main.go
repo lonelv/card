@@ -3,90 +3,25 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
-	"path/filepath"
-	"time"
-
-	"gopkg.in/chanxuehong/wechat.v2/mp/core"
-	"gopkg.in/chanxuehong/wechat.v2/mp/menu"
-	"gopkg.in/chanxuehong/wechat.v2/mp/message/callback/request"
-	"gopkg.in/chanxuehong/wechat.v2/mp/message/callback/response"
 
 	"github.com/go-ini/ini"
 	"github.com/skiplee85/card/dao"
 	"github.com/skiplee85/card/log"
 	"github.com/skiplee85/card/tesseract"
+	"github.com/skiplee85/card/wx"
 )
 
 type Config struct {
-	Level          string `ini:"LEVEL"`
-	DBUser         string `ini:"DB_USER"`
-	DBPassword     string `ini:"DB_PASSWORD"`
-	DBHost         string `ini:"DB_HOST"`
-	DBPort         int    `ini:"DB_PORT"`
-	DBDataBase     string `ini:"DB_DATABASE"`
-	HTTPPort       int    `ini:"HTTP_PORT"`
-	WXAppID        string `ini:"WX_APP_ID"`
-	WXAppSecret    string `ini:"WX_APP_SECRET"`
-	WXToken        string `ini:"WX_TOKEN"`
-	WXOriID        string `ini:"WX_ORI_ID"`
-	WXEncodeAESKey string `ini:"WX_ENCODE_AES_KEY"`
-}
-
-var (
-	// 下面两个变量不一定非要作为全局变量, 根据自己的场景来选择.
-	msgHandler core.Handler
-	msgServer  *core.Server
-)
-
-func textMsgHandler(ctx *core.Context) {
-	log.Debug("收到文本消息:\n%s\n", ctx.MsgPlaintext)
-
-	msg := request.GetText(ctx.MixedMsg)
-	resp := response.NewText(msg.FromUserName, msg.ToUserName, msg.CreateTime, msg.Content)
-	ctx.RawResponse(resp) // 明文回复
-	// ctx.AESResponse(resp, 0, "", nil) // aes密文回复
-}
-
-func imgMsgHandler(ctx *core.Context) {
-	log.Debug("收到图片消息:\n%s\n", ctx.MsgPlaintext)
-
-	msg := request.GetImage(ctx.MixedMsg)
-	ret := getPic(msg.PicURL)
-	if ret == nil {
-		ret = []byte("解析失败，请重拍~")
-	}
-	resp := response.NewText(msg.FromUserName, msg.ToUserName, msg.CreateTime, string(ret))
-	ctx.RawResponse(resp) // 明文回复
-}
-
-func defaultMsgHandler(ctx *core.Context) {
-	log.Debug("收到消息:\n%s\n", ctx.MsgPlaintext)
-	ctx.NoneResponse()
-}
-
-func menuClickEventHandler(ctx *core.Context) {
-	log.Debug("收到菜单 click 事件:\n%s\n", ctx.MsgPlaintext)
-
-	event := menu.GetClickEvent(ctx.MixedMsg)
-	resp := response.NewText(event.FromUserName, event.ToUserName, event.CreateTime, "收到 click 类型的事件")
-	ctx.RawResponse(resp) // 明文回复
-	// ctx.AESResponse(resp, 0, "", nil) // aes密文回复
-}
-
-func defaultEventHandler(ctx *core.Context) {
-	log.Debug("收到事件:\n%s\n", ctx.MsgPlaintext)
-	ctx.NoneResponse()
-}
-
-// wxCallbackHandler 是处理回调请求的 http handler.
-//  1. 不同的 web 框架有不同的实现
-//  2. 一般一个 handler 处理一个公众号的回调请求(当然也可以处理多个, 这里我只处理一个)
-func wxCallbackHandler(w http.ResponseWriter, r *http.Request) {
-	msgServer.ServeHTTP(w, r, nil)
+	Level      string `ini:"LEVEL"`
+	DBUser     string `ini:"DB_USER"`
+	DBPassword string `ini:"DB_PASSWORD"`
+	DBHost     string `ini:"DB_HOST"`
+	DBPort     int    `ini:"DB_PORT"`
+	DBDataBase string `ini:"DB_DATABASE"`
+	HTTPPort   int    `ini:"HTTP_PORT"`
+	*wx.WXConfig
 }
 
 func main() {
@@ -103,20 +38,8 @@ func main() {
 
 	log.InitLog(config.Level)
 	dao.InitMongo(fmt.Sprintf("mongodb://%s:%s@%s:%d", config.DBUser, config.DBPassword, config.DBHost, config.DBPort), config.DBDataBase, 10)
+	wx.InitWX(config.WXConfig)
 
-	// wxAppSecret = config.WXAppSecret
-
-	mux := core.NewServeMux()
-	mux.DefaultMsgHandleFunc(defaultMsgHandler)
-	mux.DefaultEventHandleFunc(defaultEventHandler)
-	mux.MsgHandleFunc(request.MsgTypeText, textMsgHandler)
-	mux.MsgHandleFunc(request.MsgTypeImage, imgMsgHandler)
-	mux.EventHandleFunc(menu.EventTypeClick, menuClickEventHandler)
-
-	msgHandler = mux
-	msgServer = core.NewServer(config.WXOriID, config.WXAppID, config.WXToken, config.WXEncodeAESKey, msgHandler, nil)
-
-	http.HandleFunc("/wx_callback", wxCallbackHandler)
 	http.HandleFunc("/upload", upload)
 	http.ListenAndServe(fmt.Sprintf(":%d", config.HTTPPort), nil)
 
@@ -124,56 +47,20 @@ func main() {
 
 func upload(w http.ResponseWriter, r *http.Request) {
 	r.ParseMultipartForm(32 << 20)
-	file, header, err := r.FormFile("pic")
+	file, _, err := r.FormFile("pic")
 	if err != nil {
 		log.Error("%+v", err)
 		return
 	}
 	defer file.Close()
-	folder := "./data/pic/"
-	tmp := "./data/tmp/"
-	f, err := os.OpenFile(tmp+header.Filename, os.O_RDWR|os.O_CREATE, 0666)
-	if err != nil {
-		log.Error("%+v", err)
-		return
-	}
-
-	io.Copy(f, file)
-	f.Close()
-	path, _ := filepath.Abs(tmp + header.Filename)
-	c := tesseract.ParseCard(path)
+	imgByte, _ := ioutil.ReadAll(file)
+	c := tesseract.ParseCardByBytes(imgByte)
 	if c != nil {
-		os.Rename(tmp+header.Filename, folder+c.No+".jpg")
-	}
-	out, _ := json.Marshal(c)
-	w.Write(out)
-}
-
-func getPic(url string) []byte {
-	imgResp, err := http.Get(url)
-	if err != nil {
-		log.Error("Get img Error:%+v", err)
-		return nil
-	}
-	folder := "./data/pic/"
-	tmpFile := fmt.Sprintf("./data/tmp/%d.jpg", time.Now().UnixNano())
-	f, err := os.OpenFile(tmpFile, os.O_RDWR|os.O_CREATE, 0666)
-	if err != nil {
-		log.Error("%+v", err)
-		return nil
-	}
-	imgByte, _ := ioutil.ReadAll(imgResp.Body)
-
-	f.Write(imgByte)
-	f.Close()
-	imgResp.Body.Close()
-
-	path, _ := filepath.Abs(tmpFile)
-	c := tesseract.ParseCard(path)
-	if c != nil {
-		os.Rename(tmpFile, folder+c.No+".jpg")
 		out, _ := json.Marshal(c)
-		return out
+		w.Write(out)
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("解析失败，请重拍~"))
 	}
-	return nil
+
 }
