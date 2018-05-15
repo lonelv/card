@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"gopkg.in/chanxuehong/wechat.v2/mp/core"
 	"gopkg.in/chanxuehong/wechat.v2/mp/menu"
@@ -54,7 +55,11 @@ func imgMsgHandler(ctx *core.Context) {
 	log.Debug("收到图片消息:\n%s\n", ctx.MsgPlaintext)
 
 	msg := request.GetImage(ctx.MixedMsg)
-	resp := response.NewText(msg.FromUserName, msg.ToUserName, msg.CreateTime, string(getPic(msg.PicURL)))
+	ret := getPic(msg.PicURL)
+	if ret == nil {
+		ret = []byte("解析失败，请重拍~")
+	}
+	resp := response.NewText(msg.FromUserName, msg.ToUserName, msg.CreateTime, string(ret))
 	ctx.RawResponse(resp) // 明文回复
 }
 
@@ -145,9 +150,13 @@ func upload(w http.ResponseWriter, r *http.Request) {
 }
 
 func getPic(url string) []byte {
-	imgResp, _ := http.Get(url)
+	imgResp, err := http.Get(url)
+	if err != nil {
+		log.Error("Get img Error:%+v", err)
+		return nil
+	}
 	folder := "./data/pic/"
-	tmpFile := "./data/tmp/tmp.jpg"
+	tmpFile := fmt.Sprintf("./data/tmp/%d.jpg", time.Now().UnixNano())
 	f, err := os.OpenFile(tmpFile, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		log.Error("%+v", err)
@@ -163,7 +172,8 @@ func getPic(url string) []byte {
 	c := tesseract.ParseCard(path)
 	if c != nil {
 		os.Rename(tmpFile, folder+c.No+".jpg")
+		out, _ := json.Marshal(c)
+		return out
 	}
-	out, _ := json.Marshal(c)
-	return out
+	return nil
 }
