@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -53,7 +54,7 @@ func imgMsgHandler(ctx *core.Context) {
 	log.Debug("收到图片消息:\n%s\n", ctx.MsgPlaintext)
 
 	msg := request.GetImage(ctx.MixedMsg)
-	resp := response.NewText(msg.FromUserName, msg.ToUserName, msg.CreateTime, msg.PicURL)
+	resp := response.NewText(msg.FromUserName, msg.ToUserName, msg.CreateTime, string(getPic(msg.PicURL)))
 	ctx.RawResponse(resp) // 明文回复
 }
 
@@ -141,4 +142,28 @@ func upload(w http.ResponseWriter, r *http.Request) {
 	}
 	out, _ := json.Marshal(c)
 	w.Write(out)
+}
+
+func getPic(url string) []byte {
+	imgResp, _ := http.Get(url)
+	folder := "./data/pic/"
+	tmpFile := "./data/tmp/tmp.jpg"
+	f, err := os.OpenFile(tmpFile, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		log.Error("%+v", err)
+		return nil
+	}
+	imgByte, _ := ioutil.ReadAll(imgResp.Body)
+
+	f.Write(imgByte)
+	f.Close()
+	imgResp.Body.Close()
+
+	path, _ := filepath.Abs(tmpFile)
+	c := tesseract.ParseCard(path)
+	if c != nil {
+		os.Rename(tmpFile, folder+c.No+".jpg")
+	}
+	out, _ := json.Marshal(c)
+	return out
 }
