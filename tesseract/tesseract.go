@@ -36,7 +36,7 @@ func execShell(s string) []string {
 func ParseCard(path string) *dao.Card {
 	cmd := fmt.Sprintf("tesseract %s stdout -l eng+chi_sim | sed -e 's/[^0-9]//g' -e '/^[[:space:]]*$/d' -e '/^.\\{1,16\\}$/d'", path)
 	ret := execShell(cmd)
-	if len(ret)%2 != 0 {
+	if len(ret) == 0 || len(ret)%2 != 0 {
 		log.Error("Error parse. %+v\n", ret)
 		return nil
 	}
