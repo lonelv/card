@@ -46,6 +46,7 @@ func main() {
 	wx.InitWXClient(config.WXAppID, config.WXAppSecret)
 
 	http.HandleFunc("/upload", upload)
+	http.HandleFunc("/send-notice", sendNotice)
 	http.ListenAndServe(fmt.Sprintf(":%d", config.HTTPPort), nil)
 
 }
@@ -68,4 +69,11 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("解析失败，请重拍~"))
 	}
 
+}
+
+func sendNotice(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	openid := query["openid"][0]
+	pic := query["pic"][0]
+	wx.SendNotice(openid, pic)
 }

@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"gopkg.in/chanxuehong/wechat.v2/mp/core"
+	"gopkg.in/chanxuehong/wechat.v2/mp/media"
 	"gopkg.in/chanxuehong/wechat.v2/mp/menu"
 	"gopkg.in/chanxuehong/wechat.v2/mp/message/callback/request"
 	"gopkg.in/chanxuehong/wechat.v2/mp/message/callback/response"
+	"gopkg.in/chanxuehong/wechat.v2/mp/message/custom"
 	"gopkg.in/chanxuehong/wechat.v2/mp/message/template"
 
 	"github.com/skiplee85/card/dao"
@@ -43,6 +46,7 @@ func InitWXServer(wxAppID, wxToken, wxOriID, wxEncodeAESKey string) {
 	mux.MsgHandleFunc(request.MsgTypeText, textMsgHandler)
 	mux.MsgHandleFunc(request.MsgTypeImage, imgMsgHandler)
 	mux.EventHandleFunc(menu.EventTypeClick, menuClickEventHandler)
+	mux.EventHandleFunc(request.EventTypeSubscribe, subscribeEventHandler)
 
 	msgHandler = mux
 	msgServer = core.NewServer(wxOriID, wxAppID, wxToken, wxEncodeAESKey, msgHandler, nil)
@@ -60,7 +64,7 @@ func textMsgHandler(ctx *core.Context) {
 	log.Debug("收到文本消息:\n%s\n", ctx.MsgPlaintext)
 
 	msg := request.GetText(ctx.MixedMsg)
-	resp := response.NewText(msg.FromUserName, msg.ToUserName, msg.CreateTime, msg.Content)
+	resp := response.NewText(msg.FromUserName, msg.ToUserName, msg.CreateTime, fmt.Sprintf("你的openid: %s", msg.FromUserName))
 	ctx.RawResponse(resp) // 明文回复
 	// ctx.AESResponse(resp, 0, "", nil) // aes密文回复
 }
@@ -103,9 +107,35 @@ func menuClickEventHandler(ctx *core.Context) {
 	// ctx.AESResponse(resp, 0, "", nil) // aes密文回复
 }
 
+func subscribeEventHandler(ctx *core.Context) {
+	log.Debug("收到关注事件:\n%s\n", ctx.MsgPlaintext)
+
+	event := menu.GetClickEvent(ctx.MixedMsg)
+	resp := response.NewText(event.FromUserName, event.ToUserName, event.CreateTime, fmt.Sprintf("你的openid: %s", event.FromUserName))
+	ctx.RawResponse(resp) // 明文回复
+	// ctx.AESResponse(resp, 0, "", nil) // aes密文回复
+}
+
 func defaultEventHandler(ctx *core.Context) {
 	log.Debug("收到事件:\n%s\n", ctx.MsgPlaintext)
 	ctx.NoneResponse()
+}
+
+// SendNotice 发送图片
+func SendNotice(openid, url string) {
+	imgResp, err := http.Get(url)
+	if err != nil {
+		log.Error("Get img Error:%+v", err)
+		return
+	}
+	defer imgResp.Body.Close()
+
+	info, err := media.UploadImageFromReader(wechatClient, fmt.Sprintf("%d.jpg", time.Now().UnixNano()), imgResp.Body)
+	if err != nil {
+		log.Error("Upload Error:%+v", err)
+		return
+	}
+	custom.NewImage(openid, info.MediaId, "")
 }
 
 // wxCallbackHandler 是处理回调请求的 http handler.
