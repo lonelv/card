@@ -135,7 +135,10 @@ func SendNotice(openid, url string) {
 		log.Error("Upload Error:%+v", err)
 		return
 	}
-	custom.NewImage(openid, info.MediaId, "")
+	err = custom.Send(wechatClient, custom.NewImage(openid, info.MediaId, ""))
+	if err != nil {
+		log.Error("SendNotice Error:%+v", err)
+	}
 }
 
 // wxCallbackHandler 是处理回调请求的 http handler.
