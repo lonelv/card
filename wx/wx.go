@@ -35,8 +35,8 @@ type tpl struct {
 	Remark   standard `json:"remark"`
 }
 
-// InitWX 初始化微信
-func InitWX(wxAppID, wxAppSecret, wxToken, wxOriID, wxEncodeAESKey string) {
+// InitWXServer 初始化微信服务
+func InitWXServer(wxAppID, wxToken, wxOriID, wxEncodeAESKey string) {
 	mux := core.NewServeMux()
 	mux.DefaultMsgHandleFunc(defaultMsgHandler)
 	mux.DefaultEventHandleFunc(defaultEventHandler)
@@ -47,10 +47,13 @@ func InitWX(wxAppID, wxAppSecret, wxToken, wxOriID, wxEncodeAESKey string) {
 	msgHandler = mux
 	msgServer = core.NewServer(wxOriID, wxAppID, wxToken, wxEncodeAESKey, msgHandler, nil)
 
+	http.HandleFunc("/wx_callback", wxCallbackHandler)
+}
+
+// InitWXClient 初始化微信操作
+func InitWXClient(wxAppID, wxAppSecret string) {
 	accessTokenServer = core.NewDefaultAccessTokenServer(wxAppID, wxAppSecret, nil)
 	wechatClient = core.NewClient(accessTokenServer, nil)
-
-	http.HandleFunc("/wx_callback", wxCallbackHandler)
 }
 
 func textMsgHandler(ctx *core.Context) {

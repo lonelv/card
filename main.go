@@ -42,7 +42,8 @@ func main() {
 
 	log.InitLog(config.Level)
 	dao.InitMongo(fmt.Sprintf("mongodb://%s:%s@%s:%d", config.DBUser, config.DBPassword, config.DBHost, config.DBPort), config.DBDataBase, 10)
-	wx.InitWX(config.WXAppID, config.WXAppSecret, config.WXToken, config.WXOriID, config.WXEncodeAESKey)
+	wx.InitWXServer(config.WXAppID, config.WXToken, config.WXOriID, config.WXEncodeAESKey)
+	wx.InitWXClient(config.WXAppID, config.WXAppSecret)
 
 	http.HandleFunc("/upload", upload)
 	http.ListenAndServe(fmt.Sprintf(":%d", config.HTTPPort), nil)
