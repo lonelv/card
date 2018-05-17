@@ -148,12 +148,13 @@ func SendNoticeImgBase64(openid, data string) {
 	bs, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
 		log.Error("Not base64 img. Error: %d", err)
+		return
 	}
 	tmpFile := fmt.Sprintf("%d.jpg", time.Now().UnixNano())
 	f, err := os.OpenFile(tmpFile, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		log.Error("%+v", err)
-		return nil
+		return
 	}
 
 	f.Write(bs)
