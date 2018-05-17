@@ -145,6 +145,20 @@ func SendNoticeImgURL(openid, url string) {
 
 // SendNoticeImgBase64 发送图片
 func SendNoticeImgBase64(openid, data string) {
+	// 先发个模板消息通知下
+	t := &tpl{}
+	t.First.Value = "抢到单啦！"
+	t.First.Color = "#173177"
+	t.Keyword1.Value = "系统"
+	t.Keyword2.Value = "还不赶紧去支付~"
+
+	resp := &template.TemplateMessage2{
+		ToUser:     openid,
+		TemplateId: "9YhtUXt4qIs7h_qtcungbN0dGxwdgn5B4w8Nk-RDW9U",
+		Data:       t,
+	}
+	template.Send(wechatClient, resp)
+
 	bs, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
 		log.Error("Not base64 img. Error: %d", err)
@@ -154,6 +168,8 @@ func SendNoticeImgBase64(openid, data string) {
 	f, err := os.OpenFile(tmpFile, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		log.Error("%+v", err)
+		f.Close()
+		os.Remove(tmpFile)
 		return
 	}
 
