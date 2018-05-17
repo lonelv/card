@@ -46,7 +46,8 @@ func main() {
 	wx.InitWXClient(config.WXAppID, config.WXAppSecret)
 
 	http.HandleFunc("/upload", upload)
-	http.HandleFunc("/send-notice", sendNotice)
+	http.HandleFunc("/send-imgbase64", sendImgBase64)
+	http.HandleFunc("/send-imgurl", sendImgURL)
 	http.ListenAndServe(fmt.Sprintf(":%d", config.HTTPPort), nil)
 
 }
@@ -71,9 +72,16 @@ func upload(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func sendNotice(w http.ResponseWriter, r *http.Request) {
+func sendImgBase64(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	openid := query["openid"][0]
-	pic := query["pic"][0]
-	wx.SendNotice(openid, pic)
+	data := query["data"][0]
+	wx.SendNoticeImgBase64(openid, data)
+}
+
+func sendImgURL(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	openid := query["openid"][0]
+	url := query["url"][0]
+	wx.SendNoticeImgURL(openid, url)
 }
