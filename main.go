@@ -73,9 +73,15 @@ func upload(w http.ResponseWriter, r *http.Request) {
 }
 
 func sendImgBase64(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	openid := r.PostFormValue("openid")
-	data := r.PostFormValue("data")
+	var ss = map[string]string{}
+	body, _ := ioutil.ReadAll(r.Body)
+	err := json.Unmarshal(body, &ss)
+	if err != nil {
+		log.Error("%s\nParse Error:%+v", body, err)
+		return
+	}
+	openid := ss["openid"]
+	data := ss["data"]
 	wx.SendNoticeImgBase64(openid, data)
 }
 
