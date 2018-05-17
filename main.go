@@ -73,9 +73,9 @@ func upload(w http.ResponseWriter, r *http.Request) {
 }
 
 func sendImgBase64(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	openid := query["openid"][0]
-	data := query["data"][0]
+	r.ParseForm()
+	openid := r.PostFormValue("openid")
+	data := r.PostFormValue("data")
 	wx.SendNoticeImgBase64(openid, data)
 }
 
