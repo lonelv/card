@@ -52,26 +52,26 @@ func GetDefaultPagination() *Pagination {
 
 // LoginReq 管理后台登陆
 type LoginReq struct {
-	Username string `form:"username" json:"username" binding:"required,min=4,max=16"`
-	Password string `form:"password" json:"password" binding:"required,min=6,max=32"`
+	Username string `json:"username" form:"username" binding:"required,min=4,max=16"`
+	Password string `json:"password" form:"password" binding:"required,min=6,max=32"`
 }
 
 // PasswordReq 管理后台修改密码请求参数
 type PasswordReq struct {
-	OriPwd string `json:"password" binding:"required,min=6,max=32"`
-	NewPwd string `json:"new_password" binding:"required,min=6,max=32"`
+	OriPwd string `json:"password" form:"password" binding:"required,min=6,max=32"`
+	NewPwd string `json:"new_password" form:"new_password" binding:"required,min=6,max=32"`
 }
 
 // SendImgReq 发送图片到微信
 type SendImgReq struct {
-	OpenID string `json:"openid"`
-	Data   string `json:"data"`
-	URL    string `json:"url"`
+	OpenID string `json:"openid" form:"openid" binding:"required"`
+	Data   string `json:"data" form:"data"`
+	URL    string `json:"url" form:"url"`
 }
 
 // SaveCardReq 发送图片到微信
 type SaveCardReq struct {
-	No     string `json:"no"`
-	Data   string `json:"data"`
-	Secret string `json:"secret"`
+	No     string `json:"no" form:"no"`
+	Data   string `json:"data" form:"data" binding:"required"`
+	Secret string `json:"secret" form:"secret"`
 }

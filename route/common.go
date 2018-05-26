@@ -66,11 +66,8 @@ func GetRouteHandler(isDebug bool) http.Handler {
 	return c.Handler(r)
 }
 
+// ValidaArgs 检查参数
 func (c *Context) ValidaArgs(args interface{}) error {
-	defer func() {
-		log.Debug("%s: %+v", c.Request.URL, args)
-	}()
-
 	if err := c.ShouldBind(args); err != nil {
 		log.Error("invalid args. %v. url=%s", err.Error(), c.Request.URL.String())
 		c.AbortWithStatusJSON(http.StatusOK, &msg.BaseResponse{Code: msg.ERROR_INVALID_ARGUMENTS, Msg: err.Error()})
@@ -79,6 +76,7 @@ func (c *Context) ValidaArgs(args interface{}) error {
 	return nil
 }
 
+// SendError 下发错误
 func (c *Context) SendError(code int) {
 	httpStatus := http.StatusInternalServerError
 	if code >= 1000 {
@@ -90,12 +88,14 @@ func (c *Context) SendError(code int) {
 	})
 }
 
+// Send 下发消息
 func (c *Context) Send(data interface{}) {
 	c.JSON(http.StatusOK, &msg.BaseResponse{
 		Data: data,
 	})
 }
 
+// SendWithPagination 带翻页信息
 func (c *Context) SendWithPagination(data interface{}, p *msg.Pagination) {
 	c.JSON(http.StatusOK, &msg.BaseResponse{
 		Data:       data,
@@ -103,6 +103,7 @@ func (c *Context) SendWithPagination(data interface{}, p *msg.Pagination) {
 	})
 }
 
+// GetClaims 获取JWT信息包
 func (c *Context) GetClaims() *msg.UserClaims {
 	v, ok := c.Get(keyUserClaims)
 	if !ok {
@@ -111,6 +112,7 @@ func (c *Context) GetClaims() *msg.UserClaims {
 	return v.(*msg.UserClaims)
 }
 
+// GetIP 获取IP
 func (c *Context) GetIP() string {
 	ip := ""
 	findHeader := []string{
