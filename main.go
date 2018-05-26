@@ -1,10 +1,16 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"time"
+
+	"gopkg.in/mgo.v2"
 
 	"github.com/go-ini/ini"
 	"github.com/skiplee85/card/dao"
@@ -48,6 +54,7 @@ func main() {
 	http.HandleFunc("/upload", upload)
 	http.HandleFunc("/send-imgbase64", sendImgBase64)
 	http.HandleFunc("/send-imgurl", sendImgURL)
+	http.HandleFunc("/save-card", saveCard)
 	http.ListenAndServe(fmt.Sprintf(":%d", config.HTTPPort), nil)
 
 }
@@ -90,4 +97,46 @@ func sendImgURL(w http.ResponseWriter, r *http.Request) {
 	openid := query["openid"][0]
 	url := query["url"][0]
 	wx.SendNoticeImgURL(openid, url)
+}
+
+func saveCard(w http.ResponseWriter, r *http.Request) {
+	var err error
+	r.ParseForm()
+	no := r.FormValue("no")
+	s := r.FormValue("secret")
+	data := r.FormValue("data")
+
+	bs, err := base64.StdEncoding.DecodeString(data)
+	if err != nil {
+		errMsg := fmt.Sprintf("Not base64 img. Error: %v", err)
+		log.Error(errMsg)
+		w.Write([]byte(errMsg))
+		return
+	}
+	f := fmt.Sprintf("./data/pic/%s.jpg", no)
+
+	file, err := os.OpenFile(f, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		log.Error("%+v", err)
+		return
+	}
+
+	file.Write(bs)
+	file.Close()
+
+	c := &dao.Card{
+		No:     no,
+		Secret: s,
+		Create: time.Now(),
+	}
+	dao.MgoExecCard(func(sc *mgo.Collection) {
+		_, err = sc.Upsert(bson.M{"no": c.No}, c)
+	})
+	if err != nil {
+		errMsg := fmt.Sprintf("Mongo Error.%v", err)
+		log.Error(errMsg)
+		w.Write([]byte(errMsg))
+	} else {
+		w.Write([]byte("Success!"))
+	}
 }
