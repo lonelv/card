@@ -23,6 +23,7 @@ func main() {
 		isDebug = true
 	}
 	defaultHandler := route.GetRouteHandler(isDebug)
-	http.ListenAndServe(fmt.Sprintf("%s:%d", conf.HTTP.Address, conf.HTTP.Port), defaultHandler)
+	http.Handle("/", defaultHandler)
+	http.ListenAndServe(fmt.Sprintf("%s:%d", conf.HTTP.Address, conf.HTTP.Port), nil)
 
 }

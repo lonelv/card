@@ -38,8 +38,9 @@ func GetRouteHandler(isDebug bool) http.Handler {
 	r := gin.Default()
 	for g, rs := range routeConf {
 		gr := r.Group(g)
-		for _, r := range rs {
+		for _, tmp := range rs {
 			hs := []gin.HandlerFunc{}
+			r := *tmp
 			if r.Role != 0 {
 				sr := func(c *gin.Context) {
 					c.Set(keyRole, r.Role)

@@ -17,8 +17,8 @@ import (
 	"github.com/skiplee85/common/log"
 )
 
-var routeConf = map[string][]baseRoute{
-	"/": []baseRoute{
+var routeConf = map[string][]*baseRoute{
+	"/": []*baseRoute{
 		{
 			Method:  "POST",
 			Path:    "/upload",
@@ -35,7 +35,7 @@ var routeConf = map[string][]baseRoute{
 			Handler: saveCard,
 		},
 	},
-	"/admin": []baseRoute{
+	"/admin": []*baseRoute{
 		{
 			// 登录
 			Method:  "POST",
