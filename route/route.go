@@ -26,7 +26,7 @@ var routeConf = map[string][]*baseRoute{
 		},
 		{
 			Method:  "POST",
-			Path:    "/send-imgbase64",
+			Path:    "/send-img",
 			Handler: sendImg,
 		},
 		{
