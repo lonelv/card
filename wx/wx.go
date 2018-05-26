@@ -16,9 +16,19 @@ import (
 	"gopkg.in/chanxuehong/wechat.v2/mp/message/custom"
 	"gopkg.in/chanxuehong/wechat.v2/mp/message/template"
 
+	"github.com/skiplee85/card/conf"
 	"github.com/skiplee85/card/dao"
-	"github.com/skiplee85/card/log"
+	"github.com/skiplee85/card/msg"
 	"github.com/skiplee85/card/tesseract"
+	"github.com/skiplee85/common/log"
+)
+
+var (
+	wxOriID        = conf.WX.OriID
+	wxAppID        = conf.WX.AppID
+	wxToken        = conf.WX.Token
+	wxAppSecret    = conf.WX.AppSecret
+	wxEncodeAESKey = conf.WX.EncodeAESKey
 )
 
 var (
@@ -41,7 +51,7 @@ type tpl struct {
 }
 
 // InitWXServer 初始化微信服务
-func InitWXServer(wxAppID, wxToken, wxOriID, wxEncodeAESKey string) {
+func InitWXServer() {
 	mux := core.NewServeMux()
 	mux.DefaultMsgHandleFunc(defaultMsgHandler)
 	mux.DefaultEventHandleFunc(defaultEventHandler)
@@ -57,7 +67,7 @@ func InitWXServer(wxAppID, wxToken, wxOriID, wxEncodeAESKey string) {
 }
 
 // InitWXClient 初始化微信操作
-func InitWXClient(wxAppID, wxAppSecret string) {
+func InitWXClient() {
 	accessTokenServer = core.NewDefaultAccessTokenServer(wxAppID, wxAppSecret, nil)
 	wechatClient = core.NewClient(accessTokenServer, nil)
 }
@@ -124,27 +134,29 @@ func defaultEventHandler(ctx *core.Context) {
 }
 
 // SendNoticeImgURL 发送图片
-func SendNoticeImgURL(openid, url string) {
+func SendNoticeImgURL(openid, url string) (string, int) {
 	imgResp, err := http.Get(url)
 	if err != nil {
 		log.Error("Get img Error:%+v", err)
-		return
+		return "", msg.ERROR_REQUEST
 	}
 	defer imgResp.Body.Close()
 
 	info, err := media.UploadImageFromReader(wechatClient, fmt.Sprintf("%d.jpg", time.Now().UnixNano()), imgResp.Body)
 	if err != nil {
 		log.Error("Upload Error:%+v", err)
-		return
+		return "", msg.ERROR_INTERNAL
 	}
 	err = custom.Send(wechatClient, custom.NewImage(openid, info.MediaId, ""))
 	if err != nil {
 		log.Error("SendNotice Error:%+v", err)
+		return "", msg.ERROR_INTERNAL
 	}
+	return "success", msg.RET_OK
 }
 
 // SendNoticeImgBase64 发送图片
-func SendNoticeImgBase64(openid, data string) {
+func SendNoticeImgBase64(openid, data string) (string, int) {
 	// 先发个模板消息通知下
 	t := &tpl{}
 	t.First.Value = "抢到单啦！"
@@ -162,7 +174,7 @@ func SendNoticeImgBase64(openid, data string) {
 	bs, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
 		log.Error("Not base64 img. Error: %d", err)
-		return
+		return "", msg.ERROR_REQUEST
 	}
 	tmpFile := fmt.Sprintf("%d.jpg", time.Now().UnixNano())
 	f, err := os.OpenFile(tmpFile, os.O_RDWR|os.O_CREATE, 0666)
@@ -170,7 +182,7 @@ func SendNoticeImgBase64(openid, data string) {
 		log.Error("%+v", err)
 		f.Close()
 		os.Remove(tmpFile)
-		return
+		return "", msg.ERROR_INTERNAL
 	}
 
 	f.Write(bs)
@@ -179,13 +191,14 @@ func SendNoticeImgBase64(openid, data string) {
 	info, err := media.UploadImage(wechatClient, tmpFile)
 	if err != nil {
 		log.Error("Upload Error:%+v", err)
-		return
+		return "", msg.ERROR_INTERNAL
 	}
 	err = custom.Send(wechatClient, custom.NewImage(openid, info.MediaId, ""))
 	if err != nil {
 		log.Error("SendNotice Error:%+v", err)
 	}
 	os.Remove(tmpFile)
+	return "success", msg.RET_OK
 }
 
 // wxCallbackHandler 是处理回调请求的 http handler.

@@ -8,5 +8,6 @@ import (
 type Card struct {
 	No     string    `bson:"no"`
 	Secret string    `bson:"secret"`
+	Pic    string    `bson:"pic"`
 	Create time.Time `bson:"create"`
 }

@@ -1,10 +1,12 @@
 package dao
 
 import (
+	"fmt"
 	"gopkg.in/mgo.v2"
 
-	"github.com/skiplee85/card/log"
-	"github.com/skiplee85/card/mongodb"
+	"github.com/skiplee85/card/conf"
+	"github.com/skiplee85/common/log"
+	"github.com/skiplee85/common/mongodb"
 )
 
 var (
@@ -12,17 +14,18 @@ var (
 	dbName  string
 )
 
-func InitMongo(url, db string, conn int) {
+func InitMongo() {
+	url := fmt.Sprintf("mongodb://%s:%s@%s:%d", conf.DB.User, conf.DB.Password, conf.DB.Host, conf.DB.Port)
 	var err error
-	MongoDB, err = mongodb.Dial(url, conn)
+	MongoDB, err = mongodb.Dial(url, conf.DB.Sessions)
 	if err != nil {
 		log.Fatal("dial mongodb error: %v. URL: %s", err, url)
 		panic(1)
 	}
 	log.Release("Connected to mongodb by " + url)
-	dbName = db
+	dbName = conf.DB.DataBase
 
-	MongoDB.EnsureUniqueIndex(db, "card", []string{"no"})
+	MongoDB.EnsureUniqueIndex(dbName, "card", []string{"no"})
 }
 
 func MgoExec(collection string, f func(sc *mgo.Collection)) {

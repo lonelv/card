@@ -13,7 +13,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/skiplee85/card/dao"
-	"github.com/skiplee85/card/log"
+	"github.com/skiplee85/common/log"
 )
 
 func execShell(s string) []string {
