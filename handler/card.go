@@ -24,3 +24,20 @@ func modifyCard(c *route.Context) {
 	c.Finish(card.Modify(req))
 
 }
+
+func saveCard(c *route.Context) {
+	var req msg.SaveCardReq
+	if err := c.ValidaArgs(&req); err != nil {
+		return
+	}
+
+	c.Finish(card.Save(req))
+}
+
+func getCardData(c *route.Context) {
+	no, isExist := c.GetQuery("no")
+	if !isExist {
+		c.SendError(msg.ERROR_REQUEST)
+	}
+	c.Finish(card.GetData(no))
+}

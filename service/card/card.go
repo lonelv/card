@@ -1,15 +1,22 @@
 package card
 
 import (
+	"encoding/base64"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"time"
+
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"os"
 
 	"github.com/skiplee85/card/dao"
 	"github.com/skiplee85/card/msg"
+	"github.com/skiplee85/common/log"
 	"github.com/skiplee85/common/route"
 )
+
+const savePathFmt = "data/pic/%s.jpg"
 
 func List(req msg.ListCardReq) ([]*dao.Card, *route.Pagination) {
 	data := []*dao.Card{}
@@ -28,6 +35,30 @@ func List(req msg.ListCardReq) ([]*dao.Card, *route.Pagination) {
 	return data, req.Pagination
 }
 
+func GetData(no string) (string, int) {
+	var err error
+	c := &dao.Card{}
+	dao.MgoExecCard(func(sc *mgo.Collection) {
+		err = sc.Find(bson.M{"no": no}).One(c)
+	})
+	if err != nil {
+		log.Error("Get Card Error.%v", err)
+		return "", msg.ERROR_REQUEST
+	}
+	if c.Data == "" {
+		bs, err := ioutil.ReadFile(c.Pic)
+		if err != nil {
+			log.Error("Get Card Error.%v", err)
+			return "", msg.ERROR_INTERNAL
+		}
+		c.Data = base64.StdEncoding.EncodeToString(bs)
+		dao.MgoExecCard(func(sc *mgo.Collection) {
+			err = sc.Update(bson.M{"no": no}, bson.M{"$set": bson.M{"data": c.Data}})
+		})
+	}
+	return c.Data, msg.RET_OK
+}
+
 func Modify(req msg.ModifyCardReq) (*dao.Card, int) {
 	var err error
 	c := &dao.Card{}
@@ -39,7 +70,7 @@ func Modify(req msg.ModifyCardReq) (*dao.Card, int) {
 		return nil, msg.ERROR_REQUEST
 	}
 	if req.NewNo != "" && req.NewNo != req.No {
-		f := fmt.Sprintf("data/pic/%s.jpg", req.NewNo)
+		f := fmt.Sprintf(savePathFmt, req.NewNo)
 		os.Rename(c.Pic, f)
 		update["no"] = req.NewNo
 		update["pic"] = f
@@ -54,4 +85,38 @@ func Modify(req msg.ModifyCardReq) (*dao.Card, int) {
 		sc.Update(bson.M{"no": req.No}, bson.M{"$set": update})
 	})
 	return c, msg.RET_OK
+}
+
+func Save(req msg.SaveCardReq) (*dao.Card, int) {
+	bs, err := base64.StdEncoding.DecodeString(req.Data)
+	if err != nil {
+		log.Error("Not base64 img. Error: %v", err)
+		return nil, msg.ERROR_REQUEST
+	}
+	f := fmt.Sprintf(savePathFmt, req.No)
+
+	file, err := os.OpenFile(f, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		log.Error("%+v", err)
+		return nil, msg.ERROR_INTERNAL
+	}
+
+	file.Write(bs)
+	file.Close()
+
+	card := &dao.Card{
+		No:     req.No,
+		Secret: req.Secret,
+		Pic:    f,
+		Data:   req.Data,
+		Create: time.Now(),
+	}
+	dao.MgoExecCard(func(sc *mgo.Collection) {
+		_, err = sc.Upsert(bson.M{"no": card.No}, card)
+	})
+	if err != nil {
+		log.Error("Mongo Error.%v", err)
+		return nil, msg.ERROR_INTERNAL
+	}
+	return card, msg.RET_OK
 }

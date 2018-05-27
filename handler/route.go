@@ -1,16 +1,8 @@
 package handler
 
 import (
-	"encoding/base64"
-	"fmt"
 	"io/ioutil"
-	"os"
-	"time"
 
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
-
-	"github.com/skiplee85/card/dao"
 	"github.com/skiplee85/card/msg"
 	"github.com/skiplee85/card/tesseract"
 	"github.com/skiplee85/card/wx"
@@ -60,6 +52,11 @@ var RouteConf = []*route.BaseRoute{
 				Path:    "/modify",
 				Handler: modifyCard,
 			},
+			{
+				Method:  "GET",
+				Path:    "/get-data",
+				Handler: getCardData,
+			},
 		},
 	},
 }
@@ -94,47 +91,5 @@ func sendImg(c *route.Context) {
 		c.Finish(wx.SendNoticeImgURL(req.OpenID, req.URL))
 	} else {
 		c.SendError(msg.ERROR_REQUEST)
-	}
-}
-
-func saveCard(c *route.Context) {
-	var req msg.SaveCardReq
-	if err := c.ValidaArgs(&req); err != nil {
-		return
-	}
-
-	bs, err := base64.StdEncoding.DecodeString(req.Data)
-	if err != nil {
-		log.Error("Not base64 img. Error: %v", err)
-		c.SendError(msg.ERROR_REQUEST)
-		return
-	}
-	f := fmt.Sprintf("data/pic/%s.jpg", req.No)
-
-	file, err := os.OpenFile(f, os.O_RDWR|os.O_CREATE, 0666)
-	if err != nil {
-		log.Error("%+v", err)
-		c.SendError(msg.ERROR_INTERNAL)
-		return
-	}
-
-	file.Write(bs)
-	file.Close()
-
-	card := &dao.Card{
-		No:     req.No,
-		Secret: req.Secret,
-		Pic:    f,
-		Data:   req.Data,
-		Create: time.Now(),
-	}
-	dao.MgoExecCard(func(sc *mgo.Collection) {
-		_, err = sc.Upsert(bson.M{"no": card.No}, card)
-	})
-	if err != nil {
-		log.Error("Mongo Error.%v", err)
-		c.SendError(msg.ERROR_INTERNAL)
-	} else {
-		c.Send(card)
 	}
 }
