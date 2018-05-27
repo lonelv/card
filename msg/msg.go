@@ -45,3 +45,13 @@ type SaveCardReq struct {
 	Data   string `json:"data" form:"data" binding:"required"`
 	Secret string `json:"secret" form:"secret"`
 }
+
+type ListCardReq struct {
+	Pagination *route.Pagination `json:"pagination" form:"pagination"`
+}
+
+type ModifyCardReq struct {
+	No     string `json:"no" form:"no" binding:"required"`
+	NewNo  string `json:"new_no" form:"new_no"`
+	Secret string `json:"secret" form:"secret"`
+}

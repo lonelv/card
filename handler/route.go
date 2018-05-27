@@ -46,6 +46,22 @@ var RouteConf = []*route.BaseRoute{
 			},
 		},
 	},
+	{
+		Path: "/card",
+		Role: 10,
+		Child: []*route.BaseRoute{
+			{
+				Method:  "POST",
+				Path:    "/list",
+				Handler: listCard,
+			},
+			{
+				Method:  "POST",
+				Path:    "/modify",
+				Handler: modifyCard,
+			},
+		},
+	},
 }
 
 func upload(c *route.Context) {
