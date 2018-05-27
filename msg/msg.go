@@ -47,6 +47,7 @@ type SaveCardReq struct {
 }
 
 type ListCardReq struct {
+	No         string            `json:"no" form:"no"`
 	Pagination *route.Pagination `json:"pagination" form:"pagination"`
 }
 
