@@ -17,30 +17,31 @@ import (
 	"github.com/skiplee85/common/log"
 )
 
-var routeConf = map[string][]*baseRoute{
-	"/": []*baseRoute{
-		{
-			Method:  "POST",
-			Path:    "/upload",
-			Handler: upload,
-		},
-		{
-			Method:  "POST",
-			Path:    "/send-img",
-			Handler: sendImg,
-		},
-		{
-			Method:  "POST",
-			Path:    "/save-card",
-			Handler: saveCard,
-		},
+var routeConf = []*baseRoute{
+	{
+		Method:  "POST",
+		Path:    "/upload",
+		Handler: upload,
 	},
-	"/admin": []*baseRoute{
-		{
-			// 登录
-			Method:  "POST",
-			Path:    "/login",
-			Handler: nil,
+	{
+		Method:  "POST",
+		Path:    "/send-img",
+		Handler: sendImg,
+	},
+	{
+		Method:  "POST",
+		Path:    "/save-card",
+		Handler: saveCard,
+	},
+	{
+		Path: "/admin",
+		Child: []*baseRoute{
+			{
+				// 登录
+				Method:  "POST",
+				Path:    "/login",
+				Handler: nil,
+			},
 		},
 	},
 }

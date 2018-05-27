@@ -28,6 +28,7 @@ type baseRoute struct {
 	Path    string
 	Handler func(*Context)
 	Role    int // 访问所需的最小角色，高级角色拥有低级角色的权限。0 表示没要求，未授权的用户也可以访问。
+	Child   []*baseRoute
 }
 
 // GetRouteHandler 获取路由
@@ -35,24 +36,9 @@ func GetRouteHandler(isDebug bool) http.Handler {
 	if isDebug {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	r := gin.Default()
-	for g, rs := range routeConf {
-		gr := r.Group(g)
-		for _, tmp := range rs {
-			hs := []gin.HandlerFunc{}
-			r := *tmp
-			if r.Role != 0 {
-				sr := func(c *gin.Context) {
-					c.Set(keyRole, r.Role)
-				}
-				hs = append(hs, sr, authMiddleware)
-			}
-			tr := func(c *gin.Context) {
-				r.Handler(&Context{Context: c})
-			}
-			hs = append(hs, tr)
-			gr.Handle(r.Method, r.Path, hs...)
-		}
+	defaultRoute := gin.Default()
+	for _, r := range routeConf {
+		createRouteHandler(r, &defaultRoute.RouterGroup)
 	}
 
 	// 跨域请求
@@ -63,7 +49,29 @@ func GetRouteHandler(isDebug bool) http.Handler {
 		Debug:            false,
 	})
 
-	return c.Handler(r)
+	return c.Handler(defaultRoute)
+}
+
+func createRouteHandler(rConf *baseRoute, g *gin.RouterGroup) {
+	r := *rConf
+	hs := []gin.HandlerFunc{}
+	if r.Role > 0 {
+		hs = append(hs, getRoleMiddleware(r.Role), authMiddleware)
+	}
+	// group
+	if len(r.Child) > 0 {
+		gg := g.Group(r.Path)
+		for _, rr := range r.Child {
+			createRouteHandler(rr, gg)
+		}
+	} else {
+		h := func(c *gin.Context) {
+			r.Handler(&Context{Context: c})
+		}
+		hs = append(hs, h)
+		g.Handle(r.Method, r.Path, hs...)
+	}
+
 }
 
 // ValidaArgs 检查参数

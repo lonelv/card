@@ -33,6 +33,12 @@ func authMiddleware(c *gin.Context) {
 	}
 }
 
+func getRoleMiddleware(role int) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set(keyRole, role)
+	}
+}
+
 func parseToken(auth string) (*msg.UserClaims, int) {
 	token, err := jwt.ParseWithClaims(auth, &msg.UserClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
