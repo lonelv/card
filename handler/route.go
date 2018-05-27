@@ -125,6 +125,7 @@ func saveCard(c *route.Context) {
 		No:     req.No,
 		Secret: req.Secret,
 		Pic:    f,
+		Data:   req.Data,
 		Create: time.Now(),
 	}
 	dao.MgoExecCard(func(sc *mgo.Collection) {

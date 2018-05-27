@@ -26,4 +26,5 @@ type Card struct {
 	Secret string    `json:"secret" bson:"secret"`
 	Pic    string    `json:"pic" bson:"pic"`
 	Create time.Time `json:"create" bson:"create"`
+	Data   string    `json:"data" bson:"data"`
 }
