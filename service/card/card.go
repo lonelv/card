@@ -31,7 +31,7 @@ func List(req msg.ListCardReq) ([]*dao.Card, *route.Pagination) {
 	dao.MgoExecCard(func(sc *mgo.Collection) {
 		total, err := sc.Find(query).Count()
 		if err == nil && total > 0 {
-			sc.Find(query).Sort("+no").Skip(req.Pagination.Size * (req.Pagination.Page - 1)).Limit(req.Pagination.Size).All(&data)
+			sc.Find(query).Sort("create").Skip(req.Pagination.Size * (req.Pagination.Page - 1)).Limit(req.Pagination.Size).All(&data)
 		}
 		req.Pagination.Total = total
 	})
