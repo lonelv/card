@@ -2,7 +2,10 @@ package dao
 
 import (
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
+	"time"
 
 	"github.com/skiplee85/card/conf"
 	"github.com/skiplee85/common/log"
@@ -23,9 +26,12 @@ func InitMongo() {
 		panic(1)
 	}
 	log.Release("Connected to mongodb by " + url)
-	dbName = conf.DB.DataBase
+	dbName = conf.DB.Database
 
+	MongoDB.EnsureUniqueIndex(dbName, "user", []string{"username"})
+	MongoDB.EnsureCounter(dbName, "counter", "user")
 	MongoDB.EnsureUniqueIndex(dbName, "card", []string{"no"})
+	checkUser()
 }
 
 func MgoExec(collection string, f func(sc *mgo.Collection)) {
@@ -41,14 +47,38 @@ func MgoExec(collection string, f func(sc *mgo.Collection)) {
 	f(session)
 }
 
+func MgoExecUser(f func(sc *mgo.Collection)) {
+	MgoExec("user", f)
+}
+
 func MgoExecCard(f func(sc *mgo.Collection)) {
 	MgoExec("card", f)
 }
 
-func OnDestroy() {
-	if MongoDB != nil {
-		log.Debug("Close mongoDB.") // TODO: mongoDB is nil. Why?
-		MongoDB.Close()
-		MongoDB = nil
-	}
+func checkUser() {
+	var u User
+	MgoExecUser(func(sc *mgo.Collection) {
+		err := sc.Find(bson.M{"username": "admin"}).One(&u)
+		if err == mgo.ErrNotFound {
+			userID, err := MongoDB.NextSeq(dbName, "counter", "user")
+			if err != nil {
+				return
+			}
+
+			hash, err := bcrypt.GenerateFromPassword([]byte("admin123321"), bcrypt.DefaultCost)
+			if err != nil {
+				return
+			}
+			u.Username = "admin"
+			u.UserID = userID
+			u.Password = string(hash)
+			u.Role = 999
+			t := time.Now()
+			u.CreateTime = t
+			u.LastLoginTime = t
+			u.LastLogOutTime = t
+			u.LoginTime = t
+			sc.Insert(u)
+		}
+	})
 }

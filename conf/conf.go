@@ -21,7 +21,7 @@ var DB struct {
 	Password string
 	Host     string
 	Port     int
-	DataBase string
+	Database string
 	Sessions int
 }
 

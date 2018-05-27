@@ -1,4 +1,4 @@
-package route
+package handler
 
 import (
 	"encoding/base64"
@@ -15,9 +15,11 @@ import (
 	"github.com/skiplee85/card/tesseract"
 	"github.com/skiplee85/card/wx"
 	"github.com/skiplee85/common/log"
+	"github.com/skiplee85/common/route"
 )
 
-var routeConf = []*baseRoute{
+// RouteConf 路由配置
+var RouteConf = []*route.BaseRoute{
 	{
 		Method:  "POST",
 		Path:    "/upload",
@@ -34,19 +36,19 @@ var routeConf = []*baseRoute{
 		Handler: saveCard,
 	},
 	{
-		Path: "/admin",
-		Child: []*baseRoute{
+		Path: "/user",
+		Child: []*route.BaseRoute{
 			{
 				// 登录
 				Method:  "POST",
 				Path:    "/login",
-				Handler: nil,
+				Handler: login,
 			},
 		},
 	},
 }
 
-func upload(c *Context) {
+func upload(c *route.Context) {
 	header, err := c.FormFile("pic")
 	if err != nil {
 		log.Error("%+v", err)
@@ -65,7 +67,7 @@ func upload(c *Context) {
 
 }
 
-func sendImg(c *Context) {
+func sendImg(c *route.Context) {
 	var req msg.SendImgReq
 	if err := c.ValidaArgs(&req); err != nil {
 		return
@@ -79,7 +81,7 @@ func sendImg(c *Context) {
 	}
 }
 
-func saveCard(c *Context) {
+func saveCard(c *route.Context) {
 	var req msg.SaveCardReq
 	if err := c.ValidaArgs(&req); err != nil {
 		return

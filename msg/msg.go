@@ -1,16 +1,14 @@
 package msg
 
 import (
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/skiplee85/common/route"
 )
 
 const (
-	RET_OK         = 0
-	ERROR_REQUEST  = 400 //非法请求
-	ERROR_INTERNAL = 500 //服务器内部错误
-
-	// general: 1000 -2999
-	ERROR_INVALID_ARGUMENTS = 1000 // 非法参数
+	RET_OK                  = route.CodeOk
+	ERROR_REQUEST           = route.CodeErrorRequest     //非法请求
+	ERROR_INTERNAL          = route.CodeErrorInternal    //服务器内部错误
+	ERROR_INVALID_ARGUMENTS = route.CodeInvalidArguments // 非法参数
 
 	ERROR_AUTH_CREDENTIALS_MISMATCH = 4001001 // 验证失败
 
@@ -21,34 +19,6 @@ const (
 	ERROR_USER_NAME_EXISTS     = 203002 // 用户名已被注册
 	ERROR_FORBIDDEN_USER       = 203003 // 账号已被封
 )
-
-type UserClaims struct {
-	UserID   int
-	Username string
-	Role     int
-	jwt.StandardClaims
-}
-
-// API 公共响应参数
-type BaseResponse struct {
-	Code       int         `json:"code"`
-	Msg        string      `json:"msg,omitempty"`
-	Data       interface{} `json:"data"`
-	Pagination *Pagination `json:"pagination,omitempty"`
-}
-
-type Pagination struct {
-	Page  int `form:"page" json:"page" binding:"required,min=0"` // 第几页
-	Size  int `form:"size" json:"size" binding:"required,min=0"` // 一页容纳最多容纳多少数据
-	Total int `form:"total" json:"total,omitempty"`              // 共有多少数据
-}
-
-func GetDefaultPagination() *Pagination {
-	return &Pagination{
-		Page: 1,
-		Size: 20,
-	}
-}
 
 // LoginReq 管理后台登陆
 type LoginReq struct {
