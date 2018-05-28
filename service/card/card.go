@@ -78,12 +78,17 @@ func Modify(req msg.ModifyCardReq) (*dao.Card, int) {
 	if err != nil {
 		return nil, msg.ERROR_REQUEST
 	}
-	if req.NewNo != 0 && req.NewNo != req.No {
-		f := fmt.Sprintf(savePathFmt, req.NewNo)
+	no, err := strconv.ParseInt(req.NewNo, 10, 64)
+	if err != nil {
+		log.Error("%+v", err)
+		return nil, msg.ERROR_INTERNAL
+	}
+	if no != 0 && no != req.No {
+		f := fmt.Sprintf(savePathFmt, no)
 		os.Rename(c.Pic, f)
-		update["no"] = req.NewNo
+		update["no"] = no
 		update["pic"] = f
-		c.No = req.NewNo
+		c.No = no
 		c.Pic = f
 	}
 	if req.Secret != "" {

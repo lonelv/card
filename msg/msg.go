@@ -53,6 +53,6 @@ type ListCardReq struct {
 
 type ModifyCardReq struct {
 	No     int64  `json:"no" form:"no" binding:"required"`
-	NewNo  int64  `json:"new_no" form:"new_no"`
+	NewNo  string  `json:"new_no" form:"new_no"`
 	Secret string `json:"secret" form:"secret"`
 }
