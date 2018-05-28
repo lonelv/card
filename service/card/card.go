@@ -78,7 +78,7 @@ func GetData(no string) (string, int) {
 	return c.Data, msg.RET_OK
 }
 
-func Modify(req msg.ModifyCardReq) (*dao.Card, int) {
+func Modify(req msg.ModifyCardReq) (*msg.Card, int) {
 	var err error
 	c := &dao.Card{}
 	update := bson.M{}
@@ -93,18 +93,20 @@ func Modify(req msg.ModifyCardReq) (*dao.Card, int) {
 	if err != nil {
 		return nil, msg.ERROR_REQUEST
 	}
-	newNo, err := strconv.ParseInt(req.NewNo, 10, 64)
-	if err != nil {
-		log.Error("%+v", err)
-		return nil, msg.ERROR_INTERNAL
-	}
-	if newNo != 0 && newNo != no {
-		f := fmt.Sprintf(savePathFmt, req.NewNo)
-		os.Rename(c.Pic, f)
-		update["no"] = newNo
-		update["pic"] = f
-		c.No = newNo
-		c.Pic = f
+	if req.NewNo != "" {
+		newNo, err := strconv.ParseInt(req.NewNo, 10, 64)
+		if err != nil {
+			log.Error("%+v", err)
+			return nil, msg.ERROR_INTERNAL
+		}
+		if newNo != 0 && newNo != no {
+			f := fmt.Sprintf(savePathFmt, req.NewNo)
+			os.Rename(c.Pic, f)
+			update["no"] = newNo
+			update["pic"] = f
+			c.No = newNo
+			c.Pic = f
+		}
 	}
 	if req.Secret != "" {
 		update["secret"] = req.Secret
@@ -113,10 +115,16 @@ func Modify(req msg.ModifyCardReq) (*dao.Card, int) {
 	dao.MgoExecCard(func(sc *mgo.Collection) {
 		sc.Update(bson.M{"no": no}, bson.M{"$set": update})
 	})
-	return c, msg.RET_OK
+	return &msg.Card{
+		No:     fmt.Sprintf("%d", c.No),
+		Secret: c.Secret,
+		Pic:    c.Pic,
+		Create: c.Create,
+		Data:   c.Data,
+	}, msg.RET_OK
 }
 
-func Save(req msg.SaveCardReq) (*dao.Card, int) {
+func Save(req msg.SaveCardReq) (*msg.Card, int) {
 	bs, err := base64.StdEncoding.DecodeString(req.Data)
 	if err != nil {
 		log.Error("Not base64 img. Error: %v", err)
@@ -151,5 +159,11 @@ func Save(req msg.SaveCardReq) (*dao.Card, int) {
 		log.Error("Mongo Error.%v", err)
 		return nil, msg.ERROR_INTERNAL
 	}
-	return card, msg.RET_OK
+	return &msg.Card{
+		No:     fmt.Sprintf("%d", card.No),
+		Secret: card.Secret,
+		Pic:    card.Pic,
+		Create: card.Create,
+		Data:   card.Data,
+	}, msg.RET_OK
 }
