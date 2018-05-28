@@ -52,7 +52,7 @@ type ListCardReq struct {
 }
 
 type ModifyCardReq struct {
-	No     string `json:"no" form:"no" binding:"required"`
-	NewNo  string `json:"new_no" form:"new_no"`
+	No     int64  `json:"no" form:"no" binding:"required"`
+	NewNo  int64  `json:"new_no" form:"new_no"`
 	Secret string `json:"secret" form:"secret"`
 }

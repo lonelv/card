@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"time"
 
 	"gopkg.in/mgo.v2"
@@ -26,12 +27,17 @@ func List(req msg.ListCardReq) ([]*dao.Card, *route.Pagination) {
 	req.Pagination.Total = 0
 	query := bson.M{}
 	if req.No != "" {
-		query["no"] = req.No
+		no, err := strconv.ParseInt(req.No, 10, 64)
+		if err != nil {
+			log.Error("%+v", err)
+			return data, req.Pagination
+		}
+		query["no"] = no
 	}
 	dao.MgoExecCard(func(sc *mgo.Collection) {
 		total, err := sc.Find(query).Count()
 		if err == nil && total > 0 {
-			sc.Find(query).Sort("create").Skip(req.Pagination.Size * (req.Pagination.Page - 1)).Limit(req.Pagination.Size).All(&data)
+			sc.Find(query).Sort("no").Skip(req.Pagination.Size * (req.Pagination.Page - 1)).Limit(req.Pagination.Size).All(&data)
 		}
 		req.Pagination.Total = total
 	})
@@ -72,7 +78,7 @@ func Modify(req msg.ModifyCardReq) (*dao.Card, int) {
 	if err != nil {
 		return nil, msg.ERROR_REQUEST
 	}
-	if req.NewNo != "" && req.NewNo != req.No {
+	if req.NewNo != 0 && req.NewNo != req.No {
 		f := fmt.Sprintf(savePathFmt, req.NewNo)
 		os.Rename(c.Pic, f)
 		update["no"] = req.NewNo
@@ -106,9 +112,13 @@ func Save(req msg.SaveCardReq) (*dao.Card, int) {
 
 	file.Write(bs)
 	file.Close()
-
+	no, err := strconv.ParseInt(req.No, 10, 64)
+	if err != nil {
+		log.Error("%+v", err)
+		return nil, msg.ERROR_INTERNAL
+	}
 	card := &dao.Card{
-		No:     req.No,
+		No:     no,
 		Secret: req.Secret,
 		Pic:    f,
 		Data:   req.Data,

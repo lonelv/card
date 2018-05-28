@@ -22,7 +22,7 @@ type User struct {
 
 // Card 卡密
 type Card struct {
-	No     string    `json:"no" bson:"no"`
+	No     int64     `json:"no" bson:"no"`
 	Secret string    `json:"secret" bson:"secret"`
 	Pic    string    `json:"pic" bson:"pic"`
 	Create time.Time `json:"create" bson:"create"`
