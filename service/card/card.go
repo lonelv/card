@@ -19,8 +19,9 @@ import (
 
 const savePathFmt = "data/pic/%s.jpg"
 
-func List(req msg.ListCardReq) ([]*dao.Card, *route.Pagination) {
+func List(req msg.ListCardReq) ([]*msg.Card, *route.Pagination) {
 	data := []*dao.Card{}
+	ret := []*msg.Card{}
 	if req.Pagination == nil {
 		req.Pagination = route.GetDefaultPagination()
 	}
@@ -30,7 +31,7 @@ func List(req msg.ListCardReq) ([]*dao.Card, *route.Pagination) {
 		no, err := strconv.ParseInt(req.No, 10, 64)
 		if err != nil {
 			log.Error("%+v", err)
-			return data, req.Pagination
+			return ret, req.Pagination
 		}
 		query["no"] = no
 	}
@@ -41,7 +42,16 @@ func List(req msg.ListCardReq) ([]*dao.Card, *route.Pagination) {
 		}
 		req.Pagination.Total = total
 	})
-	return data, req.Pagination
+	for _, d := range data {
+		ret = append(ret, &msg.Card{
+			No:     fmt.Sprintf("%d", d.No),
+			Secret: d.Secret,
+			Pic:    d.Pic,
+			Create: d.Create,
+			Data:   d.Data,
+		})
+	}
+	return ret, req.Pagination
 }
 
 func GetData(no string) (string, int) {
@@ -72,23 +82,28 @@ func Modify(req msg.ModifyCardReq) (*dao.Card, int) {
 	var err error
 	c := &dao.Card{}
 	update := bson.M{}
-	dao.MgoExecCard(func(sc *mgo.Collection) {
-		err = sc.Find(bson.M{"no": req.No}).One(c)
-	})
-	if err != nil {
-		return nil, msg.ERROR_REQUEST
-	}
-	no, err := strconv.ParseInt(req.NewNo, 10, 64)
+	no, err := strconv.ParseInt(req.No, 10, 64)
 	if err != nil {
 		log.Error("%+v", err)
 		return nil, msg.ERROR_INTERNAL
 	}
-	if no != 0 && no != req.No {
-		f := fmt.Sprintf(savePathFmt, no)
+	dao.MgoExecCard(func(sc *mgo.Collection) {
+		err = sc.Find(bson.M{"no": no}).One(c)
+	})
+	if err != nil {
+		return nil, msg.ERROR_REQUEST
+	}
+	newNo, err := strconv.ParseInt(req.NewNo, 10, 64)
+	if err != nil {
+		log.Error("%+v", err)
+		return nil, msg.ERROR_INTERNAL
+	}
+	if newNo != 0 && newNo != no {
+		f := fmt.Sprintf(savePathFmt, req.NewNo)
 		os.Rename(c.Pic, f)
-		update["no"] = no
+		update["no"] = newNo
 		update["pic"] = f
-		c.No = no
+		c.No = newNo
 		c.Pic = f
 	}
 	if req.Secret != "" {
@@ -96,7 +111,7 @@ func Modify(req msg.ModifyCardReq) (*dao.Card, int) {
 		c.Secret = req.Secret
 	}
 	dao.MgoExecCard(func(sc *mgo.Collection) {
-		sc.Update(bson.M{"no": req.No}, bson.M{"$set": update})
+		sc.Update(bson.M{"no": no}, bson.M{"$set": update})
 	})
 	return c, msg.RET_OK
 }

@@ -1,6 +1,8 @@
 package msg
 
 import (
+	"time"
+
 	"github.com/skiplee85/common/route"
 )
 
@@ -52,7 +54,14 @@ type ListCardReq struct {
 }
 
 type ModifyCardReq struct {
-	No     int64  `json:"no" form:"no" binding:"required"`
-	NewNo  string  `json:"new_no" form:"new_no"`
+	No     string `json:"no" form:"no" binding:"required"`
+	NewNo  string `json:"new_no" form:"new_no"`
 	Secret string `json:"secret" form:"secret"`
+}
+type Card struct {
+	No     string    `json:"no" bson:"no"`
+	Secret string    `json:"secret" bson:"secret"`
+	Pic    string    `json:"pic" bson:"pic"`
+	Create time.Time `json:"create" bson:"create"`
+	Data   string    `json:"data" bson:"data"`
 }
