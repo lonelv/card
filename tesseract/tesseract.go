@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -51,8 +52,13 @@ func ParseCard(path string) *dao.Card {
 		log.Error("Error parse. No length must 17, got %d. %+v\n", len(ret[1]), ret)
 		return nil
 	}
+	no, err := strconv.ParseInt(ret[1], 10, 64)
+	if err != nil {
+		log.Error("%+v", err)
+		return nil
+	}
 	c := &dao.Card{
-		No:     ret[1],
+		No:     no,
 		Secret: ret[0],
 		Create: time.Now(),
 	}
