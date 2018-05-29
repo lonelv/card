@@ -54,8 +54,13 @@ func List(req msg.ListCardReq) ([]*msg.Card, *route.Pagination) {
 	return ret, req.Pagination
 }
 
-func GetData(no string) (string, int) {
+func GetData(strNo string) (string, int) {
 	var err error
+	no, err := strconv.ParseInt(strNo, 10, 64)
+	if err != nil {
+		log.Error("%+v", err)
+		return "", msg.ERROR_INTERNAL
+	}
 	c := &dao.Card{}
 	dao.MgoExecCard(func(sc *mgo.Collection) {
 		err = sc.Find(bson.M{"no": no}).One(c)
@@ -67,7 +72,7 @@ func GetData(no string) (string, int) {
 	if c.Data == "" {
 		bs, err := ioutil.ReadFile(c.Pic)
 		if err != nil {
-			log.Error("Get Card Error.%v", err)
+			log.Error("Get Card Pic %s Error.%v", c.Pic, err)
 			return "", msg.ERROR_INTERNAL
 		}
 		c.Data = base64.StdEncoding.EncodeToString(bs)
