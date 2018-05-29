@@ -71,9 +71,9 @@ func GetData(no string) (string, int) {
 			return "", msg.ERROR_INTERNAL
 		}
 		c.Data = base64.StdEncoding.EncodeToString(bs)
-		dao.MgoExecCard(func(sc *mgo.Collection) {
-			err = sc.Update(bson.M{"no": no}, bson.M{"$set": bson.M{"data": c.Data}})
-		})
+		// dao.MgoExecCard(func(sc *mgo.Collection) {
+		// 	err = sc.Update(bson.M{"no": no}, bson.M{"$set": bson.M{"data": c.Data}})
+		// })
 	}
 	return c.Data, msg.RET_OK
 }
@@ -149,11 +149,11 @@ func Save(req msg.SaveCardReq) (*msg.Card, int) {
 		No:     no,
 		Secret: req.Secret,
 		Pic:    f,
-		Data:   req.Data,
+		// Data:   req.Data,
 		Create: time.Now(),
 	}
 	dao.MgoExecCard(func(sc *mgo.Collection) {
-		_, err = sc.Upsert(bson.M{"no": card.No}, card)
+		err = sc.Insert(card)
 	})
 	if err != nil {
 		log.Error("Mongo Error.%v", err)
